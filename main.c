@@ -15,6 +15,25 @@ int main()
 
     printf("Bloodmoon File System. %02d-%02d-%02d %02d:%02d\n", tm.tm_year % 100,
            tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min);
+
+    printf("\033[0;31m");
+    printf("       /  |             |  \\\n");
+    printf("      /               |     \\\n");
+    printf("     /    @@@   |   @@@   \\\n");
+    printf("    /  @@@@@  |  @@@@@  \\\n");
+    printf("   /  @@@@@@@| @@@@@@@  \\\n");
+    printf("  | @@@@@@@@@| @@@@@@@@@ |\n");
+    printf(" |  @@@@@@@@@@@@@@@    | |\n");
+    printf(" |  @@@@@@@@@@@@@@@   |\n");
+    printf(" |  @@@@@@@@@@@@@@@   |\n");
+    printf("  |  @@@@@@@@@@@@@  |\n");
+    printf("   \\ @@@@@@@@@@@  /\n");
+    printf("    \\ @@@@@@@  / /\n");
+    printf("     \\    |      |   /\n");
+    printf("       \\ | | | | /\n");
+    printf("          | | | |\n");
+    printf("\033[0m");
+
     while (1)
     {
         char *currentUser = getCurrentUser(&fs);
