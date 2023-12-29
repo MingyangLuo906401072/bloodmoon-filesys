@@ -12,10 +12,12 @@ int main()
     printf("File System Operations. Type 'exit' or 'logout' to quit.\n");
     while (1)
     {
-        char *crr = getCurrentDirectoryPath(&fs);
-        printf("%s>> ", crr);
+        char *currentUser = getCurrentUser(&fs);
+        char *currentDirPath = getCurrentDirectoryPath(&fs);
+        printf("%s@bloodmoon:%s>> ", currentUser, currentDirPath);
 
-        free(crr);
+        free(currentUser);
+        free(currentDirPath);
 
         fgets(command, MAX_COMMAND_LENGTH, stdin);
         command[strcspn(command, "\n")] = '\0';

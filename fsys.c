@@ -225,6 +225,7 @@ void initFileSystem(struct FileSystem *fs)
 
         fs->user_count = 0;
         fs->current_user.access_level = LOW;
+        strcpy(fs->current_user.username, "guest");
 
         for (int i = 0; i < MAX_USERS; ++i)
         {
@@ -1275,4 +1276,14 @@ struct File *getFileInDirectory(struct FileSystem *fs, const char *path, const c
 
     printf("File '%s' not found in the directory '%s'.\n", fileName, path);
     return NULL;
+}
+
+char *getCurrentUser(struct FileSystem *fs)
+{
+    if (fs == NULL)
+    {
+        return NULL;
+    }
+
+    return fs->current_user.username;
 }

@@ -110,4 +110,6 @@ void changeDirectoryAccessLevel(struct FileSystem *fs, const char *dirPath, enum
 
 struct File *getFileInDirectory(struct FileSystem *fs, const char *path, const char *fileName);
 
+char *getCurrentUser(struct FileSystem *fs);
+
 #endif /* FILESYSTEM_H */
