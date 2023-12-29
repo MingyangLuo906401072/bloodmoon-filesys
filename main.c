@@ -1,4 +1,5 @@
 #include "fparser.h"
+#include <time.h>
 
 #define MAX_COMMAND_LENGTH 100
 
@@ -9,7 +10,11 @@ int main()
 
     char command[MAX_COMMAND_LENGTH];
 
-    printf("File System Operations. Type 'exit' or 'logout' to quit.\n");
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+
+    printf("Bloodmoon File System. %02d-%02d-%02d %02d:%02d\n", tm.tm_year % 100,
+           tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min);
     while (1)
     {
         char *currentUser = getCurrentUser(&fs);
