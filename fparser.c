@@ -60,25 +60,71 @@ void parseCommand(struct FileSystem *fs, const char *command)
         }
     }
 
+    // if (strcmp(cmd, "load") == 0)
+    // {
+    //     char *fileName = strtok(NULL, " ");
+    //     char *windowsPath = strtok(NULL, " ");
+    //     char *subsystemPath = strtok(NULL, " ");
+
+    //     if (fileName != NULL && windowsPath != NULL && subsystemPath != NULL)
+    //     {
+    //         int result = loadFileContent(fileName, windowsPath, subsystemPath, fs);
+    //         if (result == 0)
+    //         {
+    //             printf("File '%s' loaded into subsystem file.\n", windowsPath);
+    //             return;
+    //         }
+    //         else
+    //         {
+    //             printf("Failed to load file '%s' into subsystem '%s'.\n", fileName, subsystemPath);
+    //             return;
+    //         }
+    //     }
+    // }
+
     if (strcmp(cmd, "load") == 0)
     {
         char *fileName = strtok(NULL, " ");
         char *windowsPath = strtok(NULL, " ");
         char *subsystemPath = strtok(NULL, " ");
 
-        if (fileName != NULL && windowsPath != NULL && subsystemPath != NULL)
+        char *fileNameCopy = (fileName != NULL) ? strdup(fileName) : NULL;
+        char *windowsPathCopy = (windowsPath != NULL) ? strdup(windowsPath) : NULL;
+        char *subsystemPathCopy = (subsystemPath != NULL) ? strdup(subsystemPath) : NULL;
+
+        if (fileNameCopy != NULL && windowsPathCopy != NULL && subsystemPathCopy != NULL)
         {
             int result = loadFileContent(fileName, windowsPath, subsystemPath, fs);
             if (result == 0)
             {
-                printf("File '%s' loaded into subsystem file.\n", windowsPath);
+                printf("File '%s' loaded into subsystem file '%s/%s' .\n", windowsPathCopy, subsystemPathCopy, fileNameCopy);
+                free(fileNameCopy);
+                free(windowsPathCopy);
+                free(subsystemPathCopy);
                 return;
             }
             else
             {
-                printf("Failed to load file '%s' into subsystem '%s'.\n", fileName, subsystemPath);
+                printf("Failed to load file '%s' into subsystem '%s'.\n", fileNameCopy, subsystemPathCopy);
+                free(fileNameCopy);
+                free(windowsPathCopy);
+                free(subsystemPathCopy);
                 return;
             }
+        }
+
+        // Free memory for copied variables if they are not NULL
+        if (fileNameCopy != NULL)
+        {
+            free(fileNameCopy);
+        }
+        if (windowsPathCopy != NULL)
+        {
+            free(windowsPathCopy);
+        }
+        if (subsystemPathCopy != NULL)
+        {
+            free(subsystemPathCopy);
         }
     }
 
