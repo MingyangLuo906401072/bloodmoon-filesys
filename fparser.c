@@ -39,21 +39,12 @@ void parseCommand(struct FileSystem *fs, const char *command)
 
     if (strcmp(cmd, "dispf") == 0)
     {
-        char *path = strtok(NULL, " ");
-        char *fileName = strtok(NULL, " ");
+        const char *path = strtok(NULL, " ");
+        const char *fileName = strtok(NULL, " ");
         if (path != NULL && fileName != NULL)
         {
-            struct File *file = getFileInDirectory(fs, path, fileName);
-            if (file != NULL && file->access <= fs->current_user.access_level)
-            {
-                displayFileInDirectory(fs, path, fileName);
-                return;
-            }
-            else
-            {
-                printf("Insufficient permissions to display the file '%s' in the directory '%s'.\n", fileName, path);
-                return;
-            }
+            displayFileInDirectory(fs, path, fileName);
+            return;
         }
     }
 
@@ -64,17 +55,8 @@ void parseCommand(struct FileSystem *fs, const char *command)
 
         if (filePath != NULL && fileName != NULL)
         {
-            struct File *file = goTo(fs, filePath);
-            if (file != NULL && strcmp(file->name, fileName) == 0 && file->access <= fs->current_user.access_level)
-            {
-                readFile(fs, filePath, fileName);
-                return;
-            }
-            else
-            {
-                printf("Insufficient permissions to read the file '%s' at path '%s'.\n", fileName, filePath);
-                return;
-            }
+            readFile(fs, filePath, fileName);
+            return;
         }
     }
 
@@ -89,7 +71,7 @@ void parseCommand(struct FileSystem *fs, const char *command)
             int result = loadFileContent(fileName, windowsPath, subsystemPath, fs);
             if (result == 0)
             {
-                printf("File '%s' loaded into subsystem file '%s/%s'.\n", windowsPath, subsystemPath, fileName);
+                printf("File '%s' loaded into subsystem file.\n", windowsPath);
                 return;
             }
             else
@@ -157,27 +139,13 @@ void parseCommand(struct FileSystem *fs, const char *command)
 
             if (filePath != NULL && fileName != NULL && content != NULL)
             {
-                struct File *file = getFileInDirectory(fs, filePath, fileName);
-
-                if (file != NULL)
-                {
-                    // Check authority level before writing
-                    if (fs->current_user.access_level >= file->access)
-                    {
-                        writeFile(fs, filePath, fileName, content);
-                        return;
-                    }
-                    else
-                    {
-                        printf("Insufficient permissions to write to file '%s'.\n", fileName);
-                        return;
-                    }
-                }
-                else
-                {
-                    printf("File not found at path: %s/%s\n", filePath, fileName);
-                    return;
-                }
+                writeFile(fs, filePath, fileName, content);
+                return;
+            }
+            else
+            {
+                printf("File not found at path: %s/%s\n", filePath, fileName);
+                return;
             }
         }
     }
@@ -222,27 +190,13 @@ void parseCommand(struct FileSystem *fs, const char *command)
             char *fileName = strtok(NULL, " ");
             if (sourcePath != NULL && destinationPath != NULL && fileName != NULL)
             {
-                struct File *file = getFileInDirectory(fs, sourcePath, fileName);
-
-                if (file != NULL)
-                {
-                    // Check authority level before moving the file
-                    if (fs->current_user.access_level >= file->access)
-                    {
-                        moveFileAtPath(fs, sourcePath, destinationPath, fileName);
-                        return;
-                    }
-                    else
-                    {
-                        printf("Insufficient permissions to move the file '%s'.\n", fileName);
-                        return;
-                    }
-                }
-                else
-                {
-                    printf("File not found at path: %s/%s\n", sourcePath, fileName);
-                    return;
-                }
+                moveFileAtPath(fs, sourcePath, destinationPath, fileName);
+                return;
+            }
+            else
+            {
+                printf("File not found at path: %s/%s\n", sourcePath, fileName);
+                return;
             }
         }
 
@@ -251,7 +205,7 @@ void parseCommand(struct FileSystem *fs, const char *command)
             char *flag = strtok(NULL, " ");
             if (flag != NULL)
             {
-                if (strcmp(flag, "-d") == 0 || strcmp(flag, "-f") == 0)
+                if (strcmp(flag, "-d") == 0)
                 {
                     char *path = strtok(NULL, " ");
                     char *fileName = NULL;
@@ -272,27 +226,8 @@ void parseCommand(struct FileSystem *fs, const char *command)
                     {
                         newAccessLevel = HIGH;
                     }
-                    // Add more conditions as needed for different access levels
 
-                    if (strcmp(flag, "-f") == 0)
-                    {
-                        fileName = strtok(NULL, " ");
-
-                        if (fileName == NULL)
-                        {
-                            printf("Please provide the filename.\n");
-                            return;
-                        }
-                    }
-
-                    if (strcmp(flag, "-f") == 0 && fileName != NULL)
-                    {
-                        changeFileAccessLevel(fs, path, fileName, newAccessLevel);
-                    }
-                    else if (strcmp(flag, "-d") == 0)
-                    {
-                        changeDirectoryAccessLevel(fs, path, newAccessLevel);
-                    }
+                    changeDirectoryAccessLevel(fs, path, newAccessLevel);
                     return;
                 }
             }

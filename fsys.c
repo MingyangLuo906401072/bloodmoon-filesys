@@ -169,7 +169,6 @@ void initFile(struct File *file)
         file->hMapFile = NULL;
         file->fileContent = NULL;
         file->size = 0;
-        file->access = LOW;
     }
 }
 
@@ -245,100 +244,80 @@ void initFileSystem(struct FileSystem *fs)
     }
 }
 
-struct File *createFile(const char *name, const char *path)
-{
-    if (name == NULL || isWhitespaceString(name) || strlen(name) >= MAX_FILE_NAME_LENGTH)
-    {
-        printf("Invalid or too long file name provided.\n");
-        return NULL;
-    }
-
-    // Check if the resulting path length exceeds the maximum limit
-    if (strlen(path) + strlen(name) + 2 >= MAX_PATH_LENGTH)
-    { // +2 for separator and null terminator
-        printf("Path length exceeds maximum limit.\n");
-        return NULL;
-    }
-
-    struct File *newFile = malloc(sizeof(struct File));
-    if (newFile == NULL)
-    {
-        printf("Memory allocation failed for file creation.\n");
-        return NULL;
-    }
-
-    initFile(newFile);
-
-    snprintf(newFile->name, MAX_FILE_NAME_LENGTH, "%s", name);
-    snprintf(newFile->path, MAX_PATH_LENGTH, "%s/%s", path, name);
-
-    return newFile;
-}
-
 void createFileInDir(struct FileSystem *fs, const char *path, const char *name)
 {
-    if (name == NULL || isWhitespaceString(name) || strlen(name) >= MAX_FILE_NAME_LENGTH)
+    if (name == NULL || isWhitespaceString(name))
     {
-        printf("Invalid or too long file name provided.\n");
+        printf("Invalid file name provided.\n");
         return;
     }
 
-    // Check if the resulting path length exceeds the maximum limit
+    if (strlen(name) >= MAX_FILE_NAME_LENGTH)
+    {
+        printf("File name length exceeds maximum limit.\n");
+        return;
+    }
+
+    if (path == NULL)
+    {
+        printf("Invalid path provided for file creation.\n");
+        return;
+    }
+
     if (strlen(path) >= MAX_PATH_LENGTH)
     {
         printf("Path length exceeds maximum limit.\n");
         return;
     }
 
-    struct Directory *dir = goTo(fs, path);
-    if (dir != NULL)
+    struct Directory *parentDir = goTo(fs, path);
+    if (parentDir != NULL)
     {
-        if (dir->file_count >= MAX_FILES)
+        if (parentDir->file_count >= MAX_FILES)
         {
-            printf("File limit reached in directory. Cannot create more files.\n");
+            printf("File limit reached in the parent directory. Cannot create more files.\n");
             return;
         }
 
-        // Check if the file name already exists at the same level
-        for (int i = 0; i < dir->file_count; ++i)
+        // Check if the file already exists in the parent directory
+        for (int i = 0; i < parentDir->file_count; ++i)
         {
-            if (dir->files[i] != NULL && strcmp(dir->files[i]->name, name) == 0)
+            if (strcmp(parentDir->files[i]->name, name) == 0)
             {
-                printf("File with the same name already exists at this level.\n");
+                printf("File '%s' already exists in path: %s\n", name, path);
                 return;
             }
         }
 
-        // Check if the resulting path length with the new file name exceeds the maximum limit
-        if (strlen(dir->path) + strlen(name) + 2 >= MAX_PATH_LENGTH)
-        { // +2 for separator and null terminator
-            printf("Path length exceeds maximum limit.\n");
+        // Create a new file
+        struct File *newFile = malloc(sizeof(struct File));
+        if (newFile == NULL)
+        {
+            printf("Memory allocation failed for file creation.\n");
             return;
         }
 
-        // Find the correct position to insert the new file based on alphabetical order
-        int pos = dir->file_count;
-        while (pos > 0 && strcmp(name, dir->files[pos - 1]->name) < 0)
-        {
-            pos--;
-        }
+        initFile(newFile);
 
-        // Shift files to make space for the new file
-        for (int i = dir->file_count; i > pos; --i)
-        {
-            dir->files[i] = dir->files[i - 1];
-        }
+        strncpy(newFile->name, name, MAX_FILE_NAME_LENGTH - 1);
+        newFile->name[MAX_FILE_NAME_LENGTH - 1] = '\0'; // Ensure null-terminated string
 
-        // Create the new file and insert it at the appropriate position
-        dir->files[pos] = createFile(name, path);
-        if (dir->files[pos] != NULL)
-        {
-            dir->file_count++;
-        }
+        // Constructing the new file's path correctly
+        char newPath[MAX_PATH_LENGTH];
+        snprintf(newPath, MAX_PATH_LENGTH, "%s", parentDir->path);
+
+        strncpy(newFile->path, newPath, MAX_PATH_LENGTH - 1);
+        newFile->path[MAX_PATH_LENGTH - 1] = '\0'; // Ensure null-terminated string
+
+        // Insert the new file into the parent directory
+        parentDir->files[parentDir->file_count] = newFile;
+        parentDir->file_count++;
+
+        printf("File '%s' created at path: %s\n", name, newFile->path);
     }
     else
     {
-        printf("Directory not found at path: %s\n", path);
+        printf("Parent directory not found at path: %s\n", path);
     }
 }
 
@@ -1056,7 +1035,7 @@ struct Directory *goTo(struct FileSystem *fs, const char *path)
     fs->current_directory = currentDir;
 
     // Update the path correctly
-    snprintf(fs->current_directory->path, MAX_PATH_LENGTH, "~%s", currentPath);
+    snprintf(fs->current_directory->path, MAX_PATH_LENGTH, "%s", currentPath);
     return fs->current_directory;
 }
 
@@ -1097,7 +1076,7 @@ void displayCurrentDirectory(struct FileSystem *fs, const char *path)
         }
         else
         {
-            printf("No files in this directory.\n");
+            printf("No files in '%s'.\n", currentDir->path);
         }
 
         // Display directories in the directory if they exist
@@ -1114,7 +1093,7 @@ void displayCurrentDirectory(struct FileSystem *fs, const char *path)
         }
         else
         {
-            printf("No directories in this directory.\n");
+            printf("No directories in '%s'.\n", currentDir->path);
         }
     }
     else
@@ -1171,57 +1150,12 @@ void displayFileInDirectory(struct FileSystem *fs, const char *path, const char 
 
         if (!found)
         {
-            printf("File '%s' not found in the directory.\n", fileName);
+            printf("File '%s' not found in the directory '%s'.\n", fileName, path);
         }
     }
     else
     {
         printf("Directory not found or invalid path provided.\n");
-    }
-}
-
-void changeFileAccessLevel(struct FileSystem *fs, const char *path, const char *fileName, enum AuthorityLevel newAccessLevel)
-{
-    if (fs == NULL || path == NULL || fileName == NULL || isWhitespaceString(path) || isWhitespaceString(fileName))
-    {
-        printf("Invalid input parameter detected.\n");
-        return;
-    }
-
-    // Check for potential buffer overflow in the file path and file name
-    if (strlen(path) + strlen(fileName) + 1 >= MAX_PATH_LENGTH || strlen(fileName) >= MAX_FILE_NAME_LENGTH)
-    {
-        printf("File path or file name length exceeds maximum limit.\n");
-        return;
-    }
-
-    // Check if the newAccessLevel is a valid AuthorityLevel value
-    if (newAccessLevel < LOW || newAccessLevel > HIGHEST)
-    {
-        printf("Invalid AuthorityLevel specified.\n");
-        return;
-    }
-
-    char filePath[MAX_PATH_LENGTH];
-    snprintf(filePath, MAX_PATH_LENGTH, "%s/%s", path, fileName);
-
-    struct Directory *fileDir = goTo(fs, filePath);
-    if (fileDir != NULL && fileDir->file_count > 0)
-    {
-        for (int i = 0; i < fileDir->file_count; ++i)
-        {
-            if (fileDir->files[i] != NULL && strcmp(fileDir->files[i]->name, fileName) == 0)
-            {
-                fileDir->files[i]->access = newAccessLevel;
-                printf("File access level changed successfully.\n");
-                return;
-            }
-        }
-        printf("File '%s' not found at path '%s'.\n", fileName, path);
-    }
-    else
-    {
-        printf("File not found or invalid path provided.\n");
     }
 }
 
@@ -1270,14 +1204,6 @@ int loadFileContent(const char *fileName, const char *windowsPath, const char *s
     if (fileName == NULL || windowsPath == NULL || subsystemPath == NULL || fs == NULL || isWhitespaceString(fileName))
     {
         printf("Invalid parameters for loading file content.\n");
-        return -1;
-    }
-
-    // Locate the file in the subsystem path by its name
-    struct Directory *subsystemDir = goTo(fs, subsystemPath);
-    if (subsystemDir == NULL)
-    {
-        printf("Subsystem directory '%s' not found.\n", subsystemPath);
         return -1;
     }
 

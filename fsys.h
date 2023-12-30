@@ -15,7 +15,7 @@
 #define MAX_PASSWORD_LENGTH 50
 #define MAX_USERS 50
 #define MAX_SUB_DIRS 50
-#define MAX_FILE_NAME_LENGTH 100
+#define MAX_FILE_NAME_LENGTH 255
 #define MAX_CHARS 255
 
 enum AuthorityLevel 
@@ -39,7 +39,6 @@ struct File {
     HANDLE hMapFile;  // Handle to the shared memory map
     LPVOID fileContent; // Pointer to the shared memory content
     int size;
-    enum AuthorityLevel access;
 };
 
 struct Directory 
@@ -76,8 +75,6 @@ void initFile(struct File *file);
 void initDirectory(struct Directory *dir);
 
 void initFileSystem(struct FileSystem *fs);
-
-struct File *createFile(const char *name, const char *path);
 
 void createDirectory(struct FileSystem *fs, const char *path, const char *name);
 
