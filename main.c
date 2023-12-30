@@ -10,11 +10,15 @@ int main()
 
     char command[MAX_COMMAND_LENGTH];
 
-    time_t t = time(NULL);
-    struct tm tm = *localtime(&t);
+    time_t currentTime;
+    struct tm *currentLocalTime;
 
-    printf("Bloodmoon File System. %02d-%02d-%02d %02d:%02d\n", tm.tm_year % 100,
-           tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min);
+    currentTime = time(NULL);
+    currentLocalTime = localtime(&currentTime);
+
+    printf("Bloodmoon File System. %02d-%02d-%02d %02d:%02d\n",
+           currentLocalTime->tm_year % 100, currentLocalTime->tm_mon + 1,
+           currentLocalTime->tm_mday, currentLocalTime->tm_hour, currentLocalTime->tm_min);
 
     printf("\033[0;31m");
     printf("       /  |             |  \\\n");
@@ -23,22 +27,35 @@ int main()
     printf("    /  @@@@@  |  @@@@@  \\\n");
     printf("   /  @@@@@@@| @@@@@@@  \\\n");
     printf("  | @@@@@@@@@| @@@@@@@@@ |\n");
-    printf(" |  @@@@@@@@@@@@@@@    | |\n");
-    printf(" |  @@@@@@@@@@@@@@@   |\n");
-    printf(" |  @@@@@@@@@@@@@@@   |\n");
-    printf("  |  @@@@@@@@@@@@@  |\n");
-    printf("   \\ @@@@@@@@@@@  /\n");
+    printf(" |  @@@@@@@@@@@@@@@    / |\n");
+    printf(" |  @@@@@@@@@@@@@@@   /| |\n");
+    printf(" |  @@@@@@@@@@@@@@@   | |\n");
+    printf("  |  @@@@@@@@@@@@@  | |\n");
+    printf("   \\ @@@@@@@@@@@  / /\n");
     printf("    \\ @@@@@@@  / /\n");
-    printf("     \\    |      |   /\n");
+    printf("     \\    |      |  //\n");
     printf("       \\ | | | | /\n");
     printf("          | | | |\n");
     printf("\033[0m");
 
     while (1)
     {
+        time_t currentTime = time(NULL);
+        struct tm *currentLocalTime = localtime(&currentTime);
+
         char *currentUser = getCurrentUser(&fs);
         char *currentDirPath = getCurrentDirectoryPath(&fs);
-        printf("%s@bloodmoon:%s>> ", currentUser, currentDirPath);
+
+        printf("\033[0;35m");
+        printf("%04d-%02d-%02d %02d:%02d ",
+               currentLocalTime->tm_year + 1900, currentLocalTime->tm_mon + 1,
+               currentLocalTime->tm_mday, currentLocalTime->tm_hour,
+               currentLocalTime->tm_min);
+        printf("\033[0;32m%s\033[0m", currentUser);
+        printf("\033[0;31m%s\033[0m", "@bloodmoon:");
+        printf("\033[0;31m%s\033[0m", ":");
+        printf("\033[0;32m%s\033[0m", currentDirPath);
+        printf("\033[0;31m%s\033[0m", ">> ");
 
         free(currentUser);
         free(currentDirPath);
