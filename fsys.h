@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <windows.h>
 
 #define MAX_FILES 100
 #define MAX_CONTENT_SIZE 1000
@@ -32,13 +33,13 @@ struct User
     enum AuthorityLevel access_level;
 };
 
-struct File 
-{
+struct File {
     char name[MAX_FILE_NAME_LENGTH];
     char path[MAX_PATH_LENGTH];
-    char *content;
+    HANDLE hMapFile;  // Handle to the shared memory map
+    LPVOID fileContent; // Pointer to the shared memory content
     int size;
-    enum AuthorityLevel access; 
+    enum AuthorityLevel access;
 };
 
 struct Directory 
@@ -103,6 +104,8 @@ void displayCurrentDirectory(struct FileSystem *fs, const char *path);
 void displayFileInDirectory(struct FileSystem *fs, const char *path, const char *fileName);
 
 char *getCurrentDirectoryPath(struct FileSystem *fs);
+
+int loadFileContent(const char *fileName, const char *windowsPath, const char *subsystemPath, struct FileSystem *fs);
 
 void changeFileAccessLevel(struct FileSystem *fs, const char *path, const char *fileName, enum AuthorityLevel newAccessLevel);
 

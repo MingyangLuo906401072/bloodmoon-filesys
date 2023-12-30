@@ -2,6 +2,11 @@
 
 int isWhitespaceString(const char *str)
 {
+    if (str == NULL)
+    {
+        return 1;
+    }
+
     int charCount = 0;
     while (*str != '\0')
     {
@@ -161,7 +166,8 @@ void initFile(struct File *file)
     {
         memset(file->name, 0, MAX_FILE_NAME_LENGTH);
         memset(file->path, 0, MAX_PATH_LENGTH);
-        file->content = NULL;
+        file->hMapFile = NULL;
+        file->fileContent = NULL;
         file->size = 0;
         file->access = LOW;
     }
@@ -248,8 +254,8 @@ struct File *createFile(const char *name, const char *path)
     }
 
     // Check if the resulting path length exceeds the maximum limit
-    if (strlen(path) >= MAX_PATH_LENGTH)
-    {
+    if (strlen(path) + strlen(name) + 2 >= MAX_PATH_LENGTH)
+    { // +2 for separator and null terminator
         printf("Path length exceeds maximum limit.\n");
         return NULL;
     }
@@ -261,20 +267,11 @@ struct File *createFile(const char *name, const char *path)
         return NULL;
     }
 
-    newFile->content = malloc(MAX_CONTENT_SIZE * sizeof(char));
-    if (newFile->content == NULL)
-    {
-        printf("Memory allocation failed for file content.\n");
-        free(newFile);
-        return NULL;
-    }
-
     initFile(newFile);
 
     snprintf(newFile->name, MAX_FILE_NAME_LENGTH, "%s", name);
     snprintf(newFile->path, MAX_PATH_LENGTH, "%s/%s", path, name);
 
-    newFile->size = 0;
     return newFile;
 }
 
@@ -305,7 +302,7 @@ void createFileInDir(struct FileSystem *fs, const char *path, const char *name)
         // Check if the file name already exists at the same level
         for (int i = 0; i < dir->file_count; ++i)
         {
-            if (dir->files[i]->content != NULL && strcmp(dir->files[i]->name, name) == 0)
+            if (dir->files[i] != NULL && strcmp(dir->files[i]->name, name) == 0)
             {
                 printf("File with the same name already exists at this level.\n");
                 return;
@@ -313,8 +310,8 @@ void createFileInDir(struct FileSystem *fs, const char *path, const char *name)
         }
 
         // Check if the resulting path length with the new file name exceeds the maximum limit
-        if (strlen(dir->path) >= MAX_PATH_LENGTH)
-        {
+        if (strlen(dir->path) + strlen(name) + 2 >= MAX_PATH_LENGTH)
+        { // +2 for separator and null terminator
             printf("Path length exceeds maximum limit.\n");
             return;
         }
@@ -333,7 +330,7 @@ void createFileInDir(struct FileSystem *fs, const char *path, const char *name)
         }
 
         // Create the new file and insert it at the appropriate position
-        dir->files[pos] = createFile(name, dir->path);
+        dir->files[pos] = createFile(name, path);
         if (dir->files[pos] != NULL)
         {
             dir->file_count++;
@@ -459,56 +456,70 @@ void writeFile(struct FileSystem *fs, const char *filePath, const char *fileName
 
     if (dir != NULL)
     {
-        // Check if the file already exists in the directory
+        // Check if the file already exists in the directory using binary search
+        int low = 0;
+        int high = dir->file_count - 1;
         int fileExists = 0;
-        for (int i = 0; i < dir->file_count; ++i)
+
+        while (low <= high)
         {
-            if (strcmp(dir->files[i]->name, fileName) == 0)
+            int mid = low + (high - low) / 2;
+            int compare = strcmp(dir->files[mid]->name, fileName);
+
+            if (compare == 0)
             {
-                sprintf(dir->files[i]->content, "%s", content);
-                dir->files[i]->size = strlen(dir->files[i]->content);
+                struct File *existingFile = dir->files[mid];
+
+                // Update file content and size
+                strcpy((char *)existingFile->fileContent, content);
+                existingFile->size = strlen(content);
                 printf("Content written to file '%s'.\n", fileName);
                 fileExists = 1;
                 break;
+            }
+            else if (compare < 0)
+            {
+                low = mid + 1;
+            }
+            else
+            {
+                high = mid - 1;
             }
         }
 
         // If the file doesn't exist, create it
         if (!fileExists)
         {
-            // Check if the directory has space for a new file
-            if (dir->file_count >= MAX_FILES)
+            createFileInDir(fs, filePath, fileName); // Create the file
+
+            // Find the newly created file after binary search
+            low = 0;
+            high = dir->file_count - 1;
+
+            while (low <= high)
             {
-                printf("Maximum file count reached in directory '%s'. Cannot create a new file.\n", filePath);
-                return;
+                int mid = low + (high - low) / 2;
+                int compare = strcmp(dir->files[mid]->name, fileName);
+
+                if (compare == 0)
+                {
+                    struct File *newFile = dir->files[mid];
+
+                    // Update file content and size
+                    strcpy((char *)newFile->fileContent, content);
+                    newFile->size = strlen(content);
+                    printf("File '%s' created and content written.\n", fileName);
+                    break;
+                }
+                else if (compare < 0)
+                {
+                    low = mid + 1;
+                }
+                else
+                {
+                    high = mid - 1;
+                }
             }
-
-            // Create a new file in the directory
-            struct File *newFile = (struct File *)malloc(sizeof(struct File));
-            if (newFile == NULL)
-            {
-                printf("Memory allocation failed for file creation.\n");
-                return;
-            }
-
-            strncpy(newFile->name, fileName, MAX_FILE_NAME_LENGTH - 1);
-            newFile->name[MAX_FILE_NAME_LENGTH - 1] = '\0'; // Ensure null-terminated string
-            strncpy(newFile->path, filePath, MAX_PATH_LENGTH - 1);
-            newFile->path[MAX_PATH_LENGTH - 1] = '\0'; // Ensure null-terminated string
-
-            newFile->content = (char *)malloc((strlen(content) + 1) * sizeof(char));
-            if (newFile->content == NULL)
-            {
-                free(newFile);
-                printf("Memory allocation failed for file content.\n");
-                return;
-            }
-
-            strcpy(newFile->content, content);
-            newFile->size = strlen(content);
-            dir->files[dir->file_count++] = newFile;
-
-            printf("File '%s' created and content written.\n", fileName);
         }
     }
     else
@@ -545,13 +556,27 @@ void readFile(struct FileSystem *fs, const char *filePath, const char *fileName)
             return;
         }
 
-        // Check if the file exists in the directory
-        for (int i = 0; i < dir->file_count; ++i)
+        // Use binary search to find the file
+        int low = 0;
+        int high = dir->file_count - 1;
+
+        while (low <= high)
         {
-            if (strcmp(dir->files[i]->name, fileName) == 0)
+            int mid = low + (high - low) / 2;
+            int compare = strcmp(dir->files[mid]->name, fileName);
+
+            if (compare == 0)
             {
-                printf("Content of file '%s':\n%s\n", fileName, dir->files[i]->content);
+                printf("Content of file '%s':\n%s\n", fileName, (char *)dir->files[mid]->fileContent);
                 return;
+            }
+            else if (compare < 0)
+            {
+                low = mid + 1;
+            }
+            else
+            {
+                high = mid - 1;
             }
         }
 
@@ -585,50 +610,54 @@ void deleteFileAtPath(struct FileSystem *fs, const char *path, const char *fileN
 
     if (dir != NULL)
     {
-        if (dir->file_count <= 0)
-        {
-            printf("No files found in directory '%s'.\n", path);
-            return;
-        }
+        int fileIndex = -1;
 
+        // Find the index of the file to delete using binary search
         int left = 0, right = dir->file_count - 1;
-        int mid, comparison;
-
         while (left <= right)
         {
-            mid = left + (right - left) / 2;
-            comparison = strcmp(dir->files[mid]->name, fileName);
+            int mid = left + (right - left) / 2;
+            int comparison = strcmp(dir->files[mid]->name, fileName);
 
             if (comparison == 0)
             {
-                // Free file content
-                if (dir->files[mid]->content != NULL)
-                {
-                    free(dir->files[mid]->content);
-                }
-
-                // Free file structure
-                free(dir->files[mid]);
-
-                // Rearrange the file array
-                dir->files[mid] = dir->files[dir->file_count - 1];
-                dir->files[dir->file_count - 1] = NULL;
-                dir->file_count--;
-
-                printf("File '%s' deleted from directory '%s'.\n", fileName, dir->name);
-                return;
+                fileIndex = mid;
+                break;
             }
-
-            if (comparison < 0)
-            {
-                right = mid - 1;
-            }
-            else
+            else if (comparison < 0)
             {
                 left = mid + 1;
             }
+            else
+            {
+                right = mid - 1;
+            }
         }
-        printf("File '%s' not found in directory '%s'.\n", fileName, path);
+
+        if (fileIndex != -1)
+        {
+            // Free file content
+            if (dir->files[fileIndex]->fileContent != NULL)
+            {
+                UnmapViewOfFile(dir->files[fileIndex]->fileContent);
+                CloseHandle(dir->files[fileIndex]->hMapFile);
+            }
+
+            // Free file structure and rearrange the file array
+            free(dir->files[fileIndex]);
+            for (int i = fileIndex; i < dir->file_count - 1; ++i)
+            {
+                dir->files[i] = dir->files[i + 1];
+            }
+            dir->files[dir->file_count - 1] = NULL;
+            dir->file_count--;
+
+            printf("File '%s' deleted from directory '%s'.\n", fileName, dir->name);
+        }
+        else
+        {
+            printf("File '%s' not found in directory '%s'.\n", fileName, path);
+        }
     }
     else
     {
@@ -1123,7 +1152,18 @@ void displayFileInDirectory(struct FileSystem *fs, const char *path, const char 
                 printf("File Name: %s\n", currentDir->files[i]->name);
                 printf("File Path: %s\n", currentDir->files[i]->path);
                 printf("File Size: %d bytes\n", currentDir->files[i]->size);
-                printf("File Content:\n%s\n", currentDir->files[i]->content);
+
+                // Check if content exists before displaying
+                if (currentDir->files[i]->fileContent != NULL)
+                {
+                    char *fileContent = (char *)currentDir->files[i]->fileContent;
+                    printf("File Content:\n%s\n", fileContent);
+                }
+                else
+                {
+                    printf("File Content: Not available\n");
+                }
+
                 found = 1;
                 break;
             }
@@ -1223,6 +1263,78 @@ void changeDirectoryAccessLevel(struct FileSystem *fs, const char *dirPath, enum
     {
         printf("Directory not found or invalid path provided.\n");
     }
+}
+
+int loadFileContent(const char *fileName, const char *windowsPath, const char *subsystemPath, struct FileSystem *fs)
+{
+    if (fileName == NULL || windowsPath == NULL || subsystemPath == NULL || fs == NULL || isWhitespaceString(fileName))
+    {
+        printf("Invalid parameters for loading file content.\n");
+        return -1;
+    }
+
+    // Locate the file in the subsystem path by its name
+    struct Directory *subsystemDir = goTo(fs, subsystemPath);
+    if (subsystemDir == NULL)
+    {
+        printf("Subsystem directory '%s' not found.\n", subsystemPath);
+        return -1;
+    }
+
+    struct File *file = getFileInDirectory(fs, subsystemPath, fileName);
+    if (file == NULL)
+    {
+        printf("File '%s' not found in the given subsystem path '%s'.\n", fileName, subsystemPath);
+        return -1;
+    }
+
+    // Open the Windows file
+    HANDLE hFile = CreateFile(windowsPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE)
+    {
+        printf("Failed to open Windows file '%s'.\n", windowsPath);
+        return -1;
+    }
+
+    // Get file size
+    DWORD fileSize = GetFileSize(hFile, NULL);
+    if (fileSize == INVALID_FILE_SIZE)
+    {
+        printf("Invalid file size for Windows file '%s'.\n", windowsPath);
+        CloseHandle(hFile);
+        return -1;
+    }
+
+    // Map the file content to the process address space
+    HANDLE hMapFile = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, fileSize, NULL);
+    CloseHandle(hFile); // Close the file handle
+
+    if (hMapFile == NULL)
+    {
+        printf("Failed to map Windows file '%s'.\n", windowsPath);
+        return -1;
+    }
+
+    LPVOID fileContent = MapViewOfFile(hMapFile, FILE_MAP_READ, 0, 0, fileSize);
+    CloseHandle(hMapFile); // Close the file mapping handle
+
+    if (fileContent == NULL)
+    {
+        printf("Failed to map view Windows file '%s'.\n", windowsPath);
+        return -1;
+    }
+
+    // Update the found file in the subsystem with the loaded content
+    // Free any existing content to avoid memory leaks
+    if (file->fileContent != NULL)
+    {
+        UnmapViewOfFile(file->fileContent);
+    }
+
+    file->fileContent = fileContent;
+    file->size = fileSize;
+
+    return 0;
 }
 
 char *getCurrentDirectoryPath(struct FileSystem *fs)

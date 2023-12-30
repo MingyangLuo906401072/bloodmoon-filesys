@@ -78,6 +78,28 @@ void parseCommand(struct FileSystem *fs, const char *command)
         }
     }
 
+    if (strcmp(cmd, "load") == 0)
+    {
+        char *fileName = strtok(NULL, " ");
+        char *windowsPath = strtok(NULL, " ");
+        char *subsystemPath = strtok(NULL, " ");
+
+        if (fileName != NULL && windowsPath != NULL && subsystemPath != NULL)
+        {
+            int result = loadFileContent(fileName, windowsPath, subsystemPath, fs);
+            if (result == 0)
+            {
+                printf("File '%s' loaded into subsystem file '%s/%s'.\n", windowsPath, subsystemPath, fileName);
+                return;
+            }
+            else
+            {
+                printf("Failed to load file '%s' into subsystem '%s'.\n", fileName, subsystemPath);
+                return;
+            }
+        }
+    }
+
     if (strcmp(cmd, "login") == 0)
     {
         char *username = strtok(NULL, " ");
