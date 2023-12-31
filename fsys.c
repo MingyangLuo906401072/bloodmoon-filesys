@@ -1035,7 +1035,7 @@ struct Directory *goTo(struct FileSystem *fs, const char *path)
     fs->current_directory = currentDir;
 
     // Update the path correctly
-    snprintf(fs->current_directory->path, MAX_PATH_LENGTH, "%s", currentPath);
+    snprintf(fs->current_directory->path, MAX_PATH_LENGTH, "%s%s", fs->root->path, currentPath);
     return fs->current_directory;
 }
 

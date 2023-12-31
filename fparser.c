@@ -224,6 +224,27 @@ void parseCommand(struct FileSystem *fs, const char *command)
             }
         }
 
+        if (strcmp(cmd, "dd") == 0)
+        {
+            char *path = strtok(NULL, " ");
+            if (path != NULL)
+            {
+                deleteDirectoryAtPath(fs, path);
+                return;
+            }
+        }
+
+        if (strcmp(cmd, "df") == 0)
+        {
+            char *path = strtok(NULL, " ");
+            char *fileName = strtok(NULL, " ");
+            if (path != NULL && fileName != NULL)
+            {
+                deleteFileAtPath(fs, path, fileName);
+                return;
+            }
+        }
+
         if (strcmp(cmd, "chal") == 0)
         {
             char *flag = strtok(NULL, " ");
@@ -280,27 +301,6 @@ void parseCommand(struct FileSystem *fs, const char *command)
             if (username != NULL)
             {
                 deleteUserFromSystem(fs, username);
-                return;
-            }
-        }
-
-        if (strcmp(cmd, "dd") == 0)
-        {
-            char *path = strtok(NULL, " ");
-            if (path != NULL)
-            {
-                deleteDirectoryAtPath(fs, path);
-                return;
-            }
-        }
-
-        if (strcmp(cmd, "df") == 0)
-        {
-            char *path = strtok(NULL, " ");
-            char *fileName = strtok(NULL, " ");
-            if (path != NULL && fileName != NULL)
-            {
-                deleteFileAtPath(fs, path, fileName);
                 return;
             }
         }
