@@ -78,7 +78,7 @@ void initFileSystem(struct FileSystem *fs);
 
 void createDirectory(struct FileSystem *fs, const char *path, const char *name);
 
-void createFileInDir(struct FileSystem *fs, const char *path, const char *name);
+int createFileInDir(struct FileSystem *fs, const char *path, const char *name);
 
 void writeFile(struct FileSystem *fs, const char *filePath, const char *fileName, const char *content);
 
@@ -109,5 +109,7 @@ void changeDirectoryAccessLevel(struct FileSystem *fs, const char *dirPath, enum
 struct File *getFileInDirectory(struct FileSystem *fs, const char *path, const char *fileName);
 
 char *getCurrentUser(struct FileSystem *fs);
+
+int outFileContent(const char *fileName, const char *subsystemPath, const char *windowsPath, struct FileSystem *fs);
 
 #endif /* FILESYSTEM_H */

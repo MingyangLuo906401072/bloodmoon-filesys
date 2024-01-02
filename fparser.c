@@ -83,7 +83,7 @@ void parseCommand(struct FileSystem *fs, const char *command)
             }
             else
             {
-                printf("Failed to load file '%s' into subsystem '%s'.\n", fileNameCopy, subsystemPathCopy);
+                printf("Failed to load file into subsystem '%s/%s'.\n", subsystemPathCopy, fileNameCopy);
                 free(fileNameCopy);
                 free(windowsPathCopy);
                 free(subsystemPathCopy);
@@ -103,6 +103,44 @@ void parseCommand(struct FileSystem *fs, const char *command)
         if (subsystemPathCopy != NULL)
         {
             free(subsystemPathCopy);
+        }
+    }
+
+    if (strcmp(cmd, "output") == 0)
+    {
+        char *fileName = strtok(NULL, " ");
+        char *subsystemPath = strtok(NULL, " ");
+        char *windowsPath = strtok(NULL, " ");
+
+        char *fileNameCopy = (fileName != NULL) ? strdup(fileName) : NULL;
+        char *subsystemPathCopy = (subsystemPath != NULL) ? strdup(subsystemPath) : NULL;
+        char *windowsPathCopy = (windowsPath != NULL) ? strdup(windowsPath) : NULL;
+
+        if (fileNameCopy != NULL && windowsPathCopy != NULL && subsystemPathCopy != NULL)
+        {
+            int result = outFileContent(fileName, subsystemPath, windowsPath, fs);
+            if (result == 0)
+            {
+                printf("File content successfully written to Windows file '%s' from subsystem '%s/%s'.\n", windowsPathCopy, subsystemPathCopy, fileNameCopy);
+                free(fileNameCopy);
+                free(windowsPathCopy);
+                free(subsystemPathCopy);
+                return;
+            }
+            else
+            {
+                printf("Failed to write file content to Windows file '%s' from subsystem '%s/%s'.\n", windowsPathCopy, subsystemPathCopy, fileNameCopy);
+                free(fileNameCopy);
+                free(windowsPathCopy);
+                free(subsystemPathCopy);
+                return;
+            }
+        }
+        else
+        {
+            printf("Invalid parameters provided for 'output'.\n");
+            // Free allocated memory for copies if necessary
+            return;
         }
     }
 

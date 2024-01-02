@@ -244,30 +244,30 @@ void initFileSystem(struct FileSystem *fs)
     }
 }
 
-void createFileInDir(struct FileSystem *fs, const char *path, const char *name)
+int createFileInDir(struct FileSystem *fs, const char *path, const char *name)
 {
     if (name == NULL || isWhitespaceString(name))
     {
         printf("Invalid file name provided.\n");
-        return;
+        return -1;
     }
 
     if (strlen(name) >= MAX_FILE_NAME_LENGTH)
     {
         printf("File name length exceeds maximum limit.\n");
-        return;
+        return -2;
     }
 
     if (path == NULL)
     {
         printf("Invalid path provided for file creation.\n");
-        return;
+        return -3;
     }
 
     if (strlen(path) >= MAX_PATH_LENGTH)
     {
         printf("Path length exceeds maximum limit.\n");
-        return;
+        return -4;
     }
 
     struct Directory *parentDir = goTo(fs, path);
@@ -276,7 +276,7 @@ void createFileInDir(struct FileSystem *fs, const char *path, const char *name)
         if (parentDir->file_count >= MAX_FILES)
         {
             printf("File limit reached in the parent directory. Cannot create more files.\n");
-            return;
+            return -5;
         }
 
         // Check if the file already exists in the parent directory
@@ -285,7 +285,7 @@ void createFileInDir(struct FileSystem *fs, const char *path, const char *name)
             if (strcmp(parentDir->files[i]->name, name) == 0)
             {
                 printf("File '%s' already exists in path: %s\n", name, path);
-                return;
+                return -6;
             }
         }
 
@@ -294,7 +294,7 @@ void createFileInDir(struct FileSystem *fs, const char *path, const char *name)
         if (newFile == NULL)
         {
             printf("Memory allocation failed for file creation.\n");
-            return;
+            return -7;
         }
 
         initFile(newFile);
@@ -309,15 +309,32 @@ void createFileInDir(struct FileSystem *fs, const char *path, const char *name)
         strncpy(newFile->path, newPath, MAX_PATH_LENGTH - 1);
         newFile->path[MAX_PATH_LENGTH - 1] = '\0'; // Ensure null-terminated string
 
-        // Insert the new file into the parent directory
-        parentDir->files[parentDir->file_count] = newFile;
+        int insertIdx = 0;
+
+        // Find the correct position to insert the new file based on alphabetical order
+        while (insertIdx < parentDir->file_count && strcmp(newFile->name, parentDir->files[insertIdx]->name) > 0)
+        {
+            insertIdx++;
+        }
+
+        // Shift files to make space for the new file
+        for (int i = parentDir->file_count; i > insertIdx; --i)
+        {
+            parentDir->files[i] = parentDir->files[i - 1];
+        }
+
+        // Insert the new file at the appropriate position
+        parentDir->files[insertIdx] = newFile;
         parentDir->file_count++;
 
         printf("File '%s' created at path: %s\n", name, newFile->path);
+
+        return 0; // Success
     }
     else
     {
         printf("Parent directory not found at path: %s\n", path);
+        return -8;
     }
 }
 
@@ -1260,6 +1277,42 @@ int loadFileContent(const char *fileName, const char *windowsPath, const char *s
     file->fileContent = fileContent;
     file->size = fileSize;
 
+    return 0;
+}
+
+int outFileContent(const char *fileName, const char *subsystemPath, const char *windowsPath, struct FileSystem *fs)
+{
+    if (fileName == NULL || windowsPath == NULL || subsystemPath == NULL || fs == NULL)
+    {
+        printf("Invalid parameters for writing file content.\n");
+        return -1;
+    }
+
+    struct File *file = getFileInDirectory(fs, subsystemPath, fileName);
+    if (file == NULL || file->fileContent == NULL)
+    {
+        printf("File '%s' not found in the given subsystem path '%s' or no content available.\n", fileName, subsystemPath);
+        return -1;
+    }
+
+    // Open the Windows file
+    HANDLE hFile = CreateFile(windowsPath, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE)
+    {
+        printf("Failed to open Windows file '%s' for writing.\n", windowsPath);
+        return -1;
+    }
+
+    // Write the content to the Windows file
+    DWORD bytesWritten;
+    if (!WriteFile(hFile, file->fileContent, file->size, &bytesWritten, NULL) || bytesWritten != file->size)
+    {
+        printf("Failed to write content to Windows file '%s'.\n", windowsPath);
+        CloseHandle(hFile);
+        return -1;
+    }
+
+    CloseHandle(hFile);
     return 0;
 }
 
