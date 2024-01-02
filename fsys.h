@@ -104,12 +104,12 @@ char *getCurrentDirectoryPath(struct FileSystem *fs);
 
 int loadFileContent(const char *fileName, const char *windowsPath, const char *subsystemPath, struct FileSystem *fs);
 
+int outFileContent(const char *fileName, const char *subsystemPath, const char *windowsPath, struct FileSystem *fs);
+
 void changeDirectoryAccessLevel(struct FileSystem *fs, const char *dirPath, enum AuthorityLevel newAccessLevel);
 
 struct File *getFileInDirectory(struct FileSystem *fs, const char *path, const char *fileName);
 
 char *getCurrentUser(struct FileSystem *fs);
-
-int outFileContent(const char *fileName, const char *subsystemPath, const char *windowsPath, struct FileSystem *fs);
 
 #endif /* FILESYSTEM_H */

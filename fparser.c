@@ -106,7 +106,7 @@ void parseCommand(struct FileSystem *fs, const char *command)
         }
     }
 
-    if (strcmp(cmd, "output") == 0)
+    if (strcmp(cmd, "out") == 0)
     {
         char *fileName = strtok(NULL, " ");
         char *subsystemPath = strtok(NULL, " ");
