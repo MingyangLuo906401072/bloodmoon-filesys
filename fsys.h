@@ -31,6 +31,7 @@ struct User
     char username[MAX_USERNAME_LENGTH];
     char password[MAX_PASSWORD_LENGTH];
     enum AuthorityLevel access_level;
+    int login_attempts;
 };
 
 struct File {

@@ -88,32 +88,65 @@ void deleteUserFromSystem(struct FileSystem *fs, const char *username)
 
 struct User loginUser(struct FileSystem *fs, const char *username, const char *password)
 {
-    if (fs == NULL || username == NULL || password == NULL ||
-        isWhitespaceString(username) || isWhitespaceString(password))
+    if (fs == NULL || username == NULL || password == NULL || isWhitespaceString(username) || isWhitespaceString(password))
     {
         printf("Invalid parameters provided for login.\n");
-        struct User emptyUser = {"", "", LOW}; // Return an empty user if login fails
+        struct User emptyUser = {"", "", LOW, 0}; // Return an empty user if login fails
         return emptyUser;
     }
 
     if (strlen(username) >= MAX_USERNAME_LENGTH || strlen(password) >= MAX_PASSWORD_LENGTH)
     {
         printf("Username or password length exceeds maximum limit.\n");
-        struct User emptyUser = {"", "", LOW}; // Return an empty user if login fails
+        struct User emptyUser = {"", "", LOW, 0}; // Return an empty user if login fails
         return emptyUser;
     }
 
+    struct User *currentUser = NULL;
+
     for (int i = 0; i < fs->user_count; ++i)
     {
-        if (strcmp(username, fs->users[i].username) == 0 && strcmp(password, fs->users[i].password) == 0)
+        if (strcmp(username, fs->users[i].username) == 0)
         {
-            printf("Logged in successfully as %s with level %d.\n", username, fs->users[i].access_level);
-            fs->current_user = fs->users[i]; // Set the current user in the file system
-            return fs->users[i];
+            currentUser = &fs->users[i];
+            break;
         }
     }
-    printf("Login failed. Invalid username or password.\n");
-    struct User emptyUser = {"", "", LOW}; // Return an empty user if login fails
+
+    if (currentUser != NULL)
+    {
+        if (strcmp(password, currentUser->password) == 0)
+        {
+            printf("Logged in successfully as %s with level %d.\n", username, currentUser->access_level);
+            currentUser->login_attempts = 0; // Reset login attempts upon successful login
+            fs->current_user = *currentUser; // Set the current user in the file system
+            return *currentUser;
+        }
+        else
+        {
+            // Increment login attempts if login fails
+            currentUser->login_attempts++;
+
+            // Check if login attempts exceed the threshold for delay
+            int attempts = currentUser->login_attempts;
+            if (attempts == 3 || attempts == 6 || attempts == 9 || attempts == 12)
+            {
+                int delay = (attempts / 3) * 30; // Calculate delay based on attempts
+                printf("Too many failed login attempts. Retry after %d seconds.\n", delay);
+                Sleep(delay * 1000); // Sleep for 'delay' seconds
+            }
+            else
+            {
+                printf("Login failed. Invalid username or password. Attempt %d.\n", attempts);
+            }
+        }
+    }
+    else
+    {
+        printf("Login failed. Invalid username.\n");
+    }
+
+    struct User emptyUser = {"", "", LOW, 0}; // Return an empty user if login fails
     return emptyUser;
 }
 
@@ -132,11 +165,33 @@ void resetPassword(struct FileSystem *fs, const char *username, const char *oldP
         return;
     }
 
+    struct User *currentUser = NULL;
+
     for (int i = 0; i < fs->user_count; ++i)
     {
-        if (strcmp(username, fs->users[i].username) == 0 && strcmp(oldPassword, fs->users[i].password) == 0)
+        if (strcmp(username, fs->users[i].username) == 0)
         {
-            strncpy(fs->users[i].password, newPassword, MAX_PASSWORD_LENGTH - 1);
+            currentUser = &fs->users[i];
+            break;
+        }
+    }
+
+    if (currentUser != NULL)
+    {
+        if (strcmp(oldPassword, currentUser->password) == 0)
+        {
+            char reenteredNewPassword[MAX_PASSWORD_LENGTH];
+            printf("Enter the new password again for verification: ");
+            fgets(reenteredNewPassword, sizeof(reenteredNewPassword), stdin);
+            reenteredNewPassword[strcspn(reenteredNewPassword, "\n")] = '\0'; // Remove newline
+
+            if (strcmp(newPassword, reenteredNewPassword) != 0)
+            {
+                printf("Passwords do not match. Password reset failed.\n");
+                return;
+            }
+
+            strncpy(currentUser->password, newPassword, MAX_PASSWORD_LENGTH - 1);
             printf("Password reset successfully for user %s.\n", username);
 
             // If the current user is resetting their own password, update it in the current_user of FileSystem
@@ -144,10 +199,33 @@ void resetPassword(struct FileSystem *fs, const char *username, const char *oldP
             {
                 strncpy(fs->current_user.password, newPassword, MAX_PASSWORD_LENGTH - 1);
             }
+
+            currentUser->login_attempts = 0; // Reset login attempts upon successful password reset
             return;
         }
+        else
+        {
+            // Increment login attempts if password reset fails
+            currentUser->login_attempts++;
+
+            // Check if login attempts exceed the threshold for delay
+            int attempts = currentUser->login_attempts;
+            if (attempts == 3 || attempts == 6 || attempts == 9 || attempts == 12)
+            {
+                int delay = (attempts / 3) * 30; // Calculate delay based on attempts
+                printf("Too many failed password reset attempts. Retry after %d seconds.\n", delay);
+                Sleep(delay * 1000); // Sleep for 'delay' seconds
+            }
+            else
+            {
+                printf("Password reset failed. Attempt %d.\n", attempts);
+            }
+        }
     }
-    printf("User not found or incorrect old password.\n");
+    else
+    {
+        printf("User not found.\n");
+    }
 }
 
 void initUser(struct User *user)
@@ -157,6 +235,7 @@ void initUser(struct User *user)
         memset(user->username, 0, MAX_USERNAME_LENGTH);
         memset(user->password, 0, MAX_PASSWORD_LENGTH);
         user->access_level = LOW;
+        user->login_attempts = 0;
     }
 }
 
@@ -238,7 +317,7 @@ void initFileSystem(struct FileSystem *fs)
         }
 
         strcpy(fs->users[fs->user_count].username, "admin");
-        strcpy(fs->users[fs->user_count].password, "YAwC4@admin1r2#3");
+        strcpy(fs->users[fs->user_count].password, "YAwC4@mdesdin-1r2#3");
         fs->users[fs->user_count].access_level = HIGHEST;
         fs->user_count++;
     }
