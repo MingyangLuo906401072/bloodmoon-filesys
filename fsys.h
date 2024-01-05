@@ -6,6 +6,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <windows.h>
+#include <time.h>
 
 #define MAX_FILES 100
 #define MAX_CONTENT_SIZE 1000
@@ -13,10 +14,13 @@
 #define MAX_PATH_LENGTH 500
 #define MAX_USERNAME_LENGTH 50
 #define MAX_PASSWORD_LENGTH 50
-#define MAX_USERS 50
+#define MAX_USERS 10
 #define MAX_SUB_DIRS 50
 #define MAX_FILE_NAME_LENGTH 255
 #define MAX_CHARS 255
+#define MAX_LOGIN_ATTEMPTS 3
+#define BASE_DELAY_SECONDS 30
+#define MAX_DELAYED_USERS 10
 
 enum AuthorityLevel 
 {
@@ -26,15 +30,36 @@ enum AuthorityLevel
     HIGHEST
 };
 
+struct Timer 
+{
+    time_t startTime;
+    int delayDuration;
+};
+
+struct DelayedTargetLoginUser 
+{
+    char username[MAX_USERNAME_LENGTH];
+    int penaltyDelaySeconds;
+    struct Timer timer;
+};
+
+struct DelayParams 
+{
+    struct DelayedTargetLoginUser delayedUsers[MAX_DELAYED_USERS];
+    int delayedUsersCount;
+};
+
 struct User 
 {
     char username[MAX_USERNAME_LENGTH];
     char password[MAX_PASSWORD_LENGTH];
     enum AuthorityLevel access_level;
     int login_attempts;
+    struct DelayParams delayParams;
 };
 
-struct File {
+struct File 
+{
     char name[MAX_FILE_NAME_LENGTH];
     char path[MAX_PATH_LENGTH];
     HANDLE hMapFile;  // Handle to the shared memory map
@@ -53,7 +78,8 @@ struct Directory
     enum AuthorityLevel access; 
 };
 
-struct FileSystem {
+struct FileSystem 
+{
     struct Directory *root;
     struct Directory *current_directory;
     struct User users[MAX_USERS];

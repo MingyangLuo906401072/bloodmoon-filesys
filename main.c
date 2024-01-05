@@ -1,5 +1,4 @@
 #include "fparser.h"
-#include <time.h>
 
 #define MAX_COMMAND_LENGTH 100
 

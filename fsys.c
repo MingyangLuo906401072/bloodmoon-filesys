@@ -86,6 +86,18 @@ void deleteUserFromSystem(struct FileSystem *fs, const char *username)
     }
 }
 
+void startTimerForUser(struct Timer *timer, int delaySeconds)
+{
+    timer->startTime = time(NULL);
+    timer->delayDuration = delaySeconds;
+}
+
+int isUserTimerExpired(struct Timer *timer)
+{
+    time_t currentTime = time(NULL);
+    return (currentTime - timer->startTime >= timer->delayDuration);
+}
+
 struct User loginUser(struct FileSystem *fs, const char *username, const char *password)
 {
     if (fs == NULL || username == NULL || password == NULL || isWhitespaceString(username) || isWhitespaceString(password))
@@ -115,25 +127,46 @@ struct User loginUser(struct FileSystem *fs, const char *username, const char *p
 
     if (currentUser != NULL)
     {
+        for (int i = 0; i < currentUser->delayParams.delayedUsersCount; ++i)
+        {
+            if (isUserTimerExpired(&(currentUser->delayParams.delayedUsers[i].timer)))
+            {
+                currentUser->delayParams.delayedUsers[i].penaltyDelaySeconds = 0;
+            }
+        }
+
+        int totalDelay = 0;
+        for (int i = 0; i < currentUser->delayParams.delayedUsersCount; ++i)
+        {
+            totalDelay += currentUser->delayParams.delayedUsers[i].penaltyDelaySeconds;
+        }
+
+        if (totalDelay > 0)
+        {
+            printf("Login failed. Users are delayed. Retry after %d seconds.\n", totalDelay);
+            struct User emptyUser = {"", "", LOW, 0};
+            return emptyUser;
+        }
+
         if (strcmp(password, currentUser->password) == 0)
         {
             printf("Logged in successfully as %s with level %d.\n", username, currentUser->access_level);
-            currentUser->login_attempts = 0; // Reset login attempts upon successful login
-            fs->current_user = *currentUser; // Set the current user in the file system
-            return *currentUser;
+            // Reset login attempts and other necessary actions
         }
         else
         {
-            // Increment login attempts if login fails
             currentUser->login_attempts++;
 
-            // Check if login attempts exceed the threshold for delay
             int attempts = currentUser->login_attempts;
-            if (attempts == 3 || attempts == 6 || attempts == 9 || attempts == 12)
+
+            if (attempts % 3 == 0)
             {
-                int delay = (attempts / 3) * 30; // Calculate delay based on attempts
-                printf("Too many failed login attempts. Retry after %d seconds.\n", delay);
-                Sleep(delay * 1000); // Sleep for 'delay' seconds
+                int penaltyDelay = (attempts / 3) * BASE_DELAY_SECONDS;
+                currentUser->delayParams.delayedUsers[currentUser->delayParams.delayedUsersCount].penaltyDelaySeconds = penaltyDelay;
+                startTimerForUser(&(currentUser->delayParams.delayedUsers[currentUser->delayParams.delayedUsersCount].timer), penaltyDelay);
+                strcpy(currentUser->delayParams.delayedUsers[currentUser->delayParams.delayedUsersCount].username, username);
+                currentUser->delayParams.delayedUsersCount++;
+                printf("Too many failed login attempts for user '%s'. Retry after %d seconds.\n", username, penaltyDelay);
             }
             else
             {
@@ -146,7 +179,7 @@ struct User loginUser(struct FileSystem *fs, const char *username, const char *p
         printf("Login failed. Invalid username.\n");
     }
 
-    struct User emptyUser = {"", "", LOW, 0}; // Return an empty user if login fails
+    struct User emptyUser = {"", "", LOW, 0};
     return emptyUser;
 }
 
@@ -178,6 +211,27 @@ void resetPassword(struct FileSystem *fs, const char *username, const char *oldP
 
     if (currentUser != NULL)
     {
+        for (int i = 0; i < currentUser->delayParams.delayedUsersCount; ++i)
+        {
+            if (isUserTimerExpired(&(currentUser->delayParams.delayedUsers[i].timer)))
+            {
+                currentUser->delayParams.delayedUsers[i].penaltyDelaySeconds = 0;
+            }
+        }
+
+        int totalDelay = 0;
+        for (int i = 0; i < currentUser->delayParams.delayedUsersCount; ++i)
+        {
+            totalDelay += currentUser->delayParams.delayedUsers[i].penaltyDelaySeconds;
+        }
+
+        if (totalDelay > 0)
+        {
+            printf("Too many failed password reset attempts. Retry after %d seconds.\n", totalDelay);
+            struct User emptyUser = {"", "", LOW, 0};
+            return;
+        }
+
         if (strcmp(oldPassword, currentUser->password) == 0)
         {
             char reenteredNewPassword[MAX_PASSWORD_LENGTH];
@@ -201,20 +255,20 @@ void resetPassword(struct FileSystem *fs, const char *username, const char *oldP
             }
 
             currentUser->login_attempts = 0; // Reset login attempts upon successful password reset
-            return;
         }
         else
         {
-            // Increment login attempts if password reset fails
             currentUser->login_attempts++;
 
-            // Check if login attempts exceed the threshold for delay
             int attempts = currentUser->login_attempts;
-            if (attempts == 3 || attempts == 6 || attempts == 9 || attempts == 12)
+            if (attempts % 3 == 0)
             {
-                int delay = (attempts / 3) * 30; // Calculate delay based on attempts
-                printf("Too many failed password reset attempts. Retry after %d seconds.\n", delay);
-                Sleep(delay * 1000); // Sleep for 'delay' seconds
+                int penaltyDelay = (attempts / 3) * BASE_DELAY_SECONDS;
+                currentUser->delayParams.delayedUsers[currentUser->delayParams.delayedUsersCount].penaltyDelaySeconds = penaltyDelay;
+                startTimerForUser(&(currentUser->delayParams.delayedUsers[currentUser->delayParams.delayedUsersCount].timer), penaltyDelay);
+                strcpy(currentUser->delayParams.delayedUsers[currentUser->delayParams.delayedUsersCount].username, username);
+                currentUser->delayParams.delayedUsersCount++;
+                printf("Too many failed password reset attempts. Retry after %d seconds.\n", penaltyDelay);
             }
             else
             {
@@ -236,6 +290,13 @@ void initUser(struct User *user)
         memset(user->password, 0, MAX_PASSWORD_LENGTH);
         user->access_level = LOW;
         user->login_attempts = 0;
+
+        user->delayParams.delayedUsersCount = 0; // Reset delayed users count
+        for (int i = 0; i < MAX_DELAYED_USERS; ++i)
+        {
+            memset(user->delayParams.delayedUsers[i].username, 0, MAX_USERNAME_LENGTH);
+            user->delayParams.delayedUsers[i].penaltyDelaySeconds = 0;
+        }
     }
 }
 
