@@ -11,7 +11,7 @@ void parseCommand(struct FileSystem *fs, const char *command)
         char *path = strtok(NULL, " ");
         if (path != NULL)
         {
-            goTo(fs, path);
+            goTo1(fs, path);
             return;
         }
     }
@@ -66,43 +66,19 @@ void parseCommand(struct FileSystem *fs, const char *command)
         char *windowsPath = strtok(NULL, " ");
         char *subsystemPath = strtok(NULL, " ");
 
-        char *fileNameCopy = (fileName != NULL) ? strdup(fileName) : NULL;
-        char *windowsPathCopy = (windowsPath != NULL) ? strdup(windowsPath) : NULL;
-        char *subsystemPathCopy = (subsystemPath != NULL) ? strdup(subsystemPath) : NULL;
-
-        if (fileNameCopy != NULL && windowsPathCopy != NULL && subsystemPathCopy != NULL)
+        if (fileName != NULL && windowsPath != NULL && subsystemPath != NULL)
         {
             int result = loadFileContent(fileName, windowsPath, subsystemPath, fs);
             if (result == 0)
             {
-                printf("File '%s' loaded into subsystem file '%s/%s' .\n", windowsPathCopy, subsystemPathCopy, fileNameCopy);
-                free(fileNameCopy);
-                free(windowsPathCopy);
-                free(subsystemPathCopy);
+                printf("File '%s' loaded into subsystem file '%s/%s'.\n", windowsPath, subsystemPath, fileName);
                 return;
             }
             else
             {
-                printf("Failed to load file into subsystem '%s/%s'.\n", subsystemPathCopy, fileNameCopy);
-                free(fileNameCopy);
-                free(windowsPathCopy);
-                free(subsystemPathCopy);
+                printf("Failed to load file into subsystem '%s/%s'.\n", subsystemPath, fileName);
                 return;
             }
-        }
-
-        // Free memory for copied variables if they are not NULL
-        if (fileNameCopy != NULL)
-        {
-            free(fileNameCopy);
-        }
-        if (windowsPathCopy != NULL)
-        {
-            free(windowsPathCopy);
-        }
-        if (subsystemPathCopy != NULL)
-        {
-            free(subsystemPathCopy);
         }
     }
 
@@ -112,36 +88,23 @@ void parseCommand(struct FileSystem *fs, const char *command)
         char *subsystemPath = strtok(NULL, " ");
         char *windowsPath = strtok(NULL, " ");
 
-        char *fileNameCopy = (fileName != NULL) ? strdup(fileName) : NULL;
-        char *subsystemPathCopy = (subsystemPath != NULL) ? strdup(subsystemPath) : NULL;
-        char *windowsPathCopy = (windowsPath != NULL) ? strdup(windowsPath) : NULL;
-
-        if (fileNameCopy != NULL && windowsPathCopy != NULL && subsystemPathCopy != NULL)
+        if (fileName != NULL && subsystemPath != NULL && windowsPath != NULL)
         {
             int result = outFileContent(fileName, subsystemPath, windowsPath, fs);
             if (result == 0)
             {
-                printf("File content successfully written to Windows file '%s' from subsystem '%s/%s'.\n", windowsPathCopy, subsystemPathCopy, fileNameCopy);
-                free(fileNameCopy);
-                free(windowsPathCopy);
-                free(subsystemPathCopy);
-                return;
+                printf("File content successfully written to Windows file '%s' from subsystem '%s/%s'.\n", windowsPath, subsystemPath, fileName);
             }
             else
             {
-                printf("Failed to write file content to Windows file '%s' from subsystem '%s/%s'.\n", windowsPathCopy, subsystemPathCopy, fileNameCopy);
-                free(fileNameCopy);
-                free(windowsPathCopy);
-                free(subsystemPathCopy);
-                return;
+                printf("Failed to write file content to Windows file '%s' from subsystem '%s/%s'.\n", windowsPath, subsystemPath, fileName);
             }
         }
         else
         {
             printf("Invalid parameters provided for 'output'.\n");
-            // Free allocated memory for copies if necessary
-            return;
         }
+        return;
     }
 
     if (strcmp(cmd, "login") == 0)

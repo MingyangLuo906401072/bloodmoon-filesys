@@ -1107,7 +1107,7 @@ void searchFileInPath(struct FileSystem *fs, const char *path, const char *fileN
     }
 }
 
-struct Directory *goTo(struct FileSystem *fs, const char *path)
+struct Directory *goTo1(struct FileSystem *fs, const char *path)
 {
     if (fs == NULL || path == NULL || isWhitespaceString(path))
     {
@@ -1122,18 +1122,7 @@ struct Directory *goTo(struct FileSystem *fs, const char *path)
         return NULL;
     }
 
-    if (path[0] != '/')
-    {
-        printf("Path must start with '/'.\n");
-        return NULL;
-    }
-
     char *inputPath = path;
-
-    if (strcmp(path, ".") == 0)
-    {
-        inputPath = getCurrentDirectoryPath(fs);
-    }
 
     struct Directory *currentDir = fs->root;
     char currentPath[MAX_PATH_LENGTH] = ""; // Track the current path
@@ -1143,6 +1132,13 @@ struct Directory *goTo(struct FileSystem *fs, const char *path)
 
     while (token != NULL)
     {
+        if (strcmp(token, ".") == 0)
+        {
+            // Stay in the current directory
+            token = strtok(NULL, "/");
+            continue;
+        }
+
         // Check for individual directory name length
         size_t dirNameLength = strlen(token);
         if (dirNameLength >= MAX_FILE_NAME_LENGTH)
@@ -1194,6 +1190,96 @@ struct Directory *goTo(struct FileSystem *fs, const char *path)
     // Update the path correctly
     snprintf(fs->current_directory->path, MAX_PATH_LENGTH, "%s%s", fs->root->path, currentPath);
     return fs->current_directory;
+}
+
+struct Directory *goTo(struct FileSystem *fs, const char *path)
+{
+    if (fs == NULL || path == NULL || isWhitespaceString(path))
+    {
+        printf("Invalid parameters provided for directory navigation.\n");
+        return NULL;
+    }
+
+    // Check for potential buffer overflow in the path
+    if (strlen(path) >= MAX_PATH_LENGTH)
+    {
+        printf("Path length exceeds maximum limit.\n");
+        return NULL;
+    }
+
+    char *inputPath = path;
+
+    struct Directory *currentDir = fs->root;
+    char currentPath[MAX_PATH_LENGTH] = ""; // Track the current path
+
+    // Traversing through directories
+    char *token = strtok(inputPath, "/");
+
+    while (token != NULL)
+    {
+        // Handle the '.' symbol for the current directory
+        if (strcmp(token, ".") == 0)
+        {
+            // Stay in the current directory
+            token = strtok(NULL, "/");
+            continue;
+        }
+
+        // Check for individual directory name length
+        size_t dirNameLength = strlen(token);
+        if (dirNameLength >= MAX_FILE_NAME_LENGTH)
+        {
+            printf("Directory name '%s' length exceeds maximum limit.\n", token);
+            return NULL;
+        }
+
+        int found = 0;
+
+        // Binary search in sorted subdirectories
+        int low = 0;
+        int high = currentDir->subdir_count - 1;
+        while (low <= high)
+        {
+            int mid = low + (high - low) / 2;
+            int comparison = strcmp(currentDir->subdirectories[mid]->name, token);
+
+            if (comparison == 0)
+            {
+                currentDir = currentDir->subdirectories[mid];
+                found = 1;
+
+                // Update the current path
+                if (strcmp(currentPath, "") == 0)
+                {
+                    snprintf(currentPath, MAX_PATH_LENGTH, "%s", token);
+                }
+                else
+                {
+                    snprintf(currentPath, MAX_PATH_LENGTH, "%s/%s", currentPath, token);
+                }
+
+                break;
+            }
+            else if (comparison < 0)
+            {
+                low = mid + 1;
+            }
+            else
+            {
+                high = mid - 1;
+            }
+        }
+
+        if (!found)
+        {
+            printf("Directory '%s' not found in path '%s'.\n", token, path);
+            return NULL;
+        }
+
+        token = strtok(NULL, "/");
+    }
+
+    return currentDir;
 }
 
 void displayCurrentDirectory(struct FileSystem *fs, const char *path)
