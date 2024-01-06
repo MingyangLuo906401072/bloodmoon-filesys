@@ -1198,7 +1198,7 @@ struct Directory *goTo1(struct FileSystem *fs, const char *path)
         return NULL;
     }
 
-    char *inputPath = path;
+    char *inputPath = strdup(path);
 
     if (strcmp(inputPath, ".") == 0)
     {
@@ -1211,13 +1211,22 @@ struct Directory *goTo1(struct FileSystem *fs, const char *path)
 
     // Traversing through directories
     char *token = strtok(inputPath, "/");
+    int firstdotfound = 0;
 
     while (token != NULL)
     {
         if (strcmp(token, ".") == 0)
         {
-            // Stay in the current directory
-            token = getCurrentDirectoryPath(fs);
+            if (!firstdotfound)
+            {
+                token = getCurrentDirectoryPath(fs);
+                firstdotfound = 1;
+            }
+            else
+            {
+                token = strtok(NULL, "/");
+                continue;
+            }
         }
 
         // Check for individual directory name length
@@ -1263,7 +1272,7 @@ struct Directory *goTo1(struct FileSystem *fs, const char *path)
 
         if (!found)
         {
-            printf("Directory '%s' not found in path '%s'.\n", token, path);
+            printf("Directory '%s' not found in path '%s'.\n", token, inputPath);
             return NULL;
         }
 
@@ -1274,6 +1283,7 @@ struct Directory *goTo1(struct FileSystem *fs, const char *path)
 
     // Update the path correctly
     snprintf(fs->current_directory->path, MAX_PATH_LENGTH, "%s", currentPath);
+    free(inputPath);
     return fs->current_directory;
 }
 
@@ -1292,7 +1302,7 @@ struct Directory *goTo(struct FileSystem *fs, const char *path)
         return NULL;
     }
 
-    char *inputPath = path;
+    char *inputPath = strdup(path);
 
     if (strcmp(inputPath, ".") == 0)
     {
@@ -1305,13 +1315,22 @@ struct Directory *goTo(struct FileSystem *fs, const char *path)
 
     // Traversing through directories
     char *token = strtok(inputPath, "/");
+    int firstdotfound = 0;
 
     while (token != NULL)
     {
         if (strcmp(token, ".") == 0)
         {
-            // Stay in the current directory
-            token = getCurrentDirectoryPath(fs);
+            if (!firstdotfound)
+            {
+                token = getCurrentDirectoryPath(fs);
+                firstdotfound = 1;
+            }
+            else
+            {
+                token = strtok(NULL, "/");
+                continue;
+            }
         }
 
         // Check for individual directory name length
@@ -1362,13 +1381,14 @@ struct Directory *goTo(struct FileSystem *fs, const char *path)
 
         if (!found)
         {
-            printf("Directory '%s' not found in path '%s'.\n", token, path);
+            printf("Directory '%s' not found in path '%s'.\n", token, inputPath);
             return NULL;
         }
 
         token = strtok(NULL, "/");
     }
 
+    free(inputPath);
     return currentDir;
 }
 
