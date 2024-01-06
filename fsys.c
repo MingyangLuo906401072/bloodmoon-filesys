@@ -363,7 +363,7 @@ void initFileSystem(struct FileSystem *fs)
 
         strncpy(fs->root->subdirectories[0]->name, "home", MAX_FILE_NAME_LENGTH - 1);
         fs->root->subdirectories[0]->name[MAX_FILE_NAME_LENGTH - 1] = '\0';
-        strcpy(fs->root->subdirectories[0]->path, "~/home");
+        strcpy(fs->root->subdirectories[0]->path, "home");
 
         fs->root->subdir_count = 1;
         fs->current_directory = fs->root->subdirectories[0];
@@ -410,7 +410,15 @@ int createFileInDir(struct FileSystem *fs, const char *path, const char *name)
         return -4;
     }
 
-    struct Directory *parentDir = goTo(fs, path);
+    char *inputPath = path;
+
+    if (strcmp(inputPath, ".") == 0)
+    {
+        // Stay in the current directory
+        inputPath = getCurrentDirectoryPath(fs);
+    }
+
+    struct Directory *parentDir = goTo(fs, inputPath);
     if (parentDir != NULL)
     {
         if (parentDir->file_count >= MAX_FILES)
@@ -504,7 +512,15 @@ void createDirectory(struct FileSystem *fs, const char *path, const char *name)
         return;
     }
 
-    struct Directory *parentDir = goTo(fs, path);
+    char *inputPath = path;
+
+    if (strcmp(inputPath, ".") == 0)
+    {
+        // Stay in the current directory
+        inputPath = getCurrentDirectoryPath(fs);
+    }
+
+    struct Directory *parentDir = goTo(fs, inputPath);
     if (parentDir != NULL)
     {
         if (parentDir->subdir_count >= MAX_SUB_DIRS)
@@ -588,7 +604,15 @@ void writeFile(struct FileSystem *fs, const char *filePath, const char *fileName
         return;
     }
 
-    struct Directory *dir = goTo(fs, filePath);
+    char *inputPath = filePath;
+
+    if (strcmp(inputPath, ".") == 0)
+    {
+        // Stay in the current directory
+        inputPath = getCurrentDirectoryPath(fs);
+    }
+
+    struct Directory *dir = goTo(fs, inputPath);
 
     if (dir != NULL)
     {
@@ -682,7 +706,15 @@ void readFile(struct FileSystem *fs, const char *filePath, const char *fileName)
         return;
     }
 
-    struct Directory *dir = goTo(fs, filePath);
+    char *inputPath = filePath;
+
+    if (strcmp(inputPath, ".") == 0)
+    {
+        // Stay in the current directory
+        inputPath = getCurrentDirectoryPath(fs);
+    }
+
+    struct Directory *dir = goTo(fs, inputPath);
 
     if (dir != NULL)
     {
@@ -742,7 +774,15 @@ void deleteFileAtPath(struct FileSystem *fs, const char *path, const char *fileN
         return;
     }
 
-    struct Directory *dir = goTo(fs, path);
+    char *inputPath = path;
+
+    if (strcmp(inputPath, ".") == 0)
+    {
+        // Stay in the current directory
+        inputPath = getCurrentDirectoryPath(fs);
+    }
+
+    struct Directory *dir = goTo(fs, inputPath);
 
     if (dir != NULL)
     {
@@ -840,7 +880,15 @@ void deleteDirectoryAtPath(struct FileSystem *fs, const char *path)
         return;
     }
 
-    struct Directory *parentDir = goTo(fs, path);
+    char *inputPath = path;
+
+    if (strcmp(inputPath, ".") == 0)
+    {
+        // Stay in the current directory
+        inputPath = getCurrentDirectoryPath(fs);
+    }
+
+    struct Directory *parentDir = goTo(fs, inputPath);
 
     if (parentDir != NULL)
     {
@@ -906,8 +954,22 @@ void moveDirectoryAtPath(struct FileSystem *fs, const char *sourcePath, const ch
         return;
     }
 
-    struct Directory *sourceDir = goTo(fs, sourcePath);
-    struct Directory *destinationDir = goTo(fs, destinationPath);
+    char *inputSourcePath = sourcePath;
+    char *inputDestPath = destinationPath;
+
+    if (strcmp(inputSourcePath, ".") == 0)
+    {
+        inputSourcePath = getCurrentDirectoryPath(fs);
+    }
+
+    if (strcmp(inputDestPath, ".") == 0)
+    {
+        // Stay in the current directory
+        inputDestPath = getCurrentDirectoryPath(fs);
+    }
+
+    struct Directory *sourceDir = goTo(fs, inputSourcePath);
+    struct Directory *destinationDir = goTo(fs, inputDestPath);
 
     if (sourceDir != NULL && destinationDir != NULL)
     {
@@ -978,8 +1040,22 @@ void moveFileAtPath(struct FileSystem *fs, const char *sourcePath, const char *d
         return;
     }
 
-    struct Directory *sourceDir = goTo(fs, sourcePath);
-    struct Directory *destinationDir = goTo(fs, destinationPath);
+    char *inputSourcePath = sourcePath;
+    char *inputDestPath = destinationPath;
+
+    if (strcmp(inputSourcePath, ".") == 0)
+    {
+        inputSourcePath = getCurrentDirectoryPath(fs);
+    }
+
+    if (strcmp(inputDestPath, ".") == 0)
+    {
+        // Stay in the current directory
+        inputDestPath = getCurrentDirectoryPath(fs);
+    }
+
+    struct Directory *sourceDir = goTo(fs, inputSourcePath);
+    struct Directory *destinationDir = goTo(fs, inputDestPath);
 
     if (sourceDir != NULL && destinationDir != NULL)
     {
@@ -1124,6 +1200,12 @@ struct Directory *goTo1(struct FileSystem *fs, const char *path)
 
     char *inputPath = path;
 
+    if (strcmp(inputPath, ".") == 0)
+    {
+        // Stay in the current directory
+        inputPath = getCurrentDirectoryPath(fs);
+    }
+
     struct Directory *currentDir = fs->root;
     char currentPath[MAX_PATH_LENGTH] = ""; // Track the current path
 
@@ -1135,8 +1217,7 @@ struct Directory *goTo1(struct FileSystem *fs, const char *path)
         if (strcmp(token, ".") == 0)
         {
             // Stay in the current directory
-            token = strtok(NULL, "/");
-            continue;
+            token = getCurrentDirectoryPath(fs);
         }
 
         // Check for individual directory name length
@@ -1163,7 +1244,11 @@ struct Directory *goTo1(struct FileSystem *fs, const char *path)
                 found = 1;
 
                 // Update the current path
-                snprintf(currentPath, MAX_PATH_LENGTH, "%s/%s", currentPath, token);
+                if (strlen(currentPath) > 0)
+                {
+                    strncat(currentPath, "/", sizeof(currentPath) - strlen(currentPath) - 1);
+                }
+                strncat(currentPath, token, sizeof(currentPath) - strlen(currentPath) - 1);
                 break;
             }
             else if (comparison < 0)
@@ -1188,7 +1273,7 @@ struct Directory *goTo1(struct FileSystem *fs, const char *path)
     fs->current_directory = currentDir;
 
     // Update the path correctly
-    snprintf(fs->current_directory->path, MAX_PATH_LENGTH, "%s%s", fs->root->path, currentPath);
+    snprintf(fs->current_directory->path, MAX_PATH_LENGTH, "%s", currentPath);
     return fs->current_directory;
 }
 
@@ -1209,6 +1294,12 @@ struct Directory *goTo(struct FileSystem *fs, const char *path)
 
     char *inputPath = path;
 
+    if (strcmp(inputPath, ".") == 0)
+    {
+        // Stay in the current directory
+        inputPath = getCurrentDirectoryPath(fs);
+    }
+
     struct Directory *currentDir = fs->root;
     char currentPath[MAX_PATH_LENGTH] = ""; // Track the current path
 
@@ -1217,12 +1308,10 @@ struct Directory *goTo(struct FileSystem *fs, const char *path)
 
     while (token != NULL)
     {
-        // Handle the '.' symbol for the current directory
         if (strcmp(token, ".") == 0)
         {
             // Stay in the current directory
-            token = strtok(NULL, "/");
-            continue;
+            token = getCurrentDirectoryPath(fs);
         }
 
         // Check for individual directory name length
@@ -1251,11 +1340,12 @@ struct Directory *goTo(struct FileSystem *fs, const char *path)
                 // Update the current path
                 if (strcmp(currentPath, "") == 0)
                 {
-                    snprintf(currentPath, MAX_PATH_LENGTH, "%s", token);
+                    strncat(currentPath, token, sizeof(currentPath) - strlen(currentPath) - 1);
                 }
                 else
                 {
-                    snprintf(currentPath, MAX_PATH_LENGTH, "%s/%s", currentPath, token);
+                    strncat(currentPath, "/", sizeof(currentPath) - strlen(currentPath) - 1);
+                    strncat(currentPath, token, sizeof(currentPath) - strlen(currentPath) - 1);
                 }
 
                 break;
@@ -1297,7 +1387,14 @@ void displayCurrentDirectory(struct FileSystem *fs, const char *path)
         return;
     }
 
-    struct Directory *currentDir = goTo(fs, path);
+    char *inputPath = path;
+
+    if (strcmp(inputPath, ".") == 0)
+    {
+        inputPath = getCurrentDirectoryPath(fs);
+    }
+
+    struct Directory *currentDir = goTo(fs, inputPath);
 
     if (currentDir != NULL)
     {
@@ -1362,7 +1459,15 @@ void displayFileInDirectory(struct FileSystem *fs, const char *path, const char 
         return;
     }
 
-    struct Directory *currentDir = goTo(fs, path);
+    char *inputPath = path;
+
+    if (strcmp(inputPath, ".") == 0)
+    {
+        // Stay in the current directory
+        inputPath = getCurrentDirectoryPath(fs);
+    }
+
+    struct Directory *currentDir = goTo(fs, inputPath);
 
     if (currentDir != NULL)
     {
@@ -1424,7 +1529,14 @@ void changeDirectoryAccessLevel(struct FileSystem *fs, const char *dirPath, enum
         return;
     }
 
-    struct Directory *targetDir = goTo(fs, dirPath);
+    char *inputPath = dirPath;
+
+    if (strcmp(inputPath, ".") == 0)
+    {
+        inputPath = getCurrentDirectoryPath(fs);
+    }
+
+    struct Directory *targetDir = goTo(fs, inputPath);
     if (targetDir != NULL && targetDir->subdir_count > 0)
     {
         for (int i = 0; i < targetDir->subdir_count; ++i)
@@ -1550,14 +1662,9 @@ char *getCurrentDirectoryPath(struct FileSystem *fs)
         return NULL;
     }
 
-    struct Directory *currentDir = fs->current_directory;
-    if (currentDir == NULL)
-    {
-        printf("Current directory not set in the file system.\n");
-        return NULL;
-    }
+    char *currentPath = strdup(fs->current_directory->path);
 
-    return currentDir->path;
+    return currentPath;
 }
 
 struct File *getFileInDirectory(struct FileSystem *fs, const char *path, const char *fileName)
