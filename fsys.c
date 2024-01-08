@@ -230,7 +230,6 @@ void resetPassword(struct FileSystem *fs, const char *username)
 
     if (currentUser != NULL)
     {
-        // Existing delay and login attempts logic...
         for (int i = 0; i < currentUser->delayParams.delayedUsersCount; ++i)
         {
             if (isUserTimerExpired(&(currentUser->delayParams.delayedUsers[i].timer)))
