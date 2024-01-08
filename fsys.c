@@ -171,7 +171,11 @@ struct User loginUser(struct FileSystem *fs, const char *username)
         if (strcmp(password, currentUser->password) == 0)
         {
             printf("Logged in successfully as %s with level %d.\n", username, currentUser->access_level);
-            // Reset login attempts and other necessary actions
+            currentUser->login_attempts = 0; // Reset login attempts
+            // Update the current user in the file system
+            fs->current_user = *currentUser;
+            // Return the logged-in user
+            return *currentUser;
         }
         else
         {

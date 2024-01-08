@@ -1,1 +1,1 @@
-bloodmoon simple linux-like file system
+bloodmoon simple Windows sub file system
