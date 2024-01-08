@@ -98,18 +98,18 @@ int isUserTimerExpired(struct Timer *timer)
     return (currentTime - timer->startTime >= timer->delayDuration);
 }
 
-struct User loginUser(struct FileSystem *fs, const char *username, const char *password)
+struct User loginUser(struct FileSystem *fs, const char *username)
 {
-    if (fs == NULL || username == NULL || password == NULL || isWhitespaceString(username) || isWhitespaceString(password))
+    if (fs == NULL || username == NULL || isWhitespaceString(username))
     {
         printf("Invalid parameters provided for login.\n");
         struct User emptyUser = {"", "", LOW, 0}; // Return an empty user if login fails
         return emptyUser;
     }
 
-    if (strlen(username) >= MAX_USERNAME_LENGTH || strlen(password) >= MAX_PASSWORD_LENGTH)
+    if (strlen(username) >= MAX_USERNAME_LENGTH)
     {
-        printf("Username or password length exceeds maximum limit.\n");
+        printf("Username length exceeds maximum limit.\n");
         struct User emptyUser = {"", "", LOW, 0}; // Return an empty user if login fails
         return emptyUser;
     }
@@ -148,6 +148,26 @@ struct User loginUser(struct FileSystem *fs, const char *username, const char *p
             return emptyUser;
         }
 
+        printf("Enter password: ");
+        char password[MAX_PASSWORD_LENGTH];
+        int index = 0;
+        char ch;
+        while ((ch = _getch()) != '\r' && index < MAX_PASSWORD_LENGTH - 1)
+        {
+            if (ch == '\b' && index > 0)
+            {
+                printf("\b \b");
+                index--;
+            }
+            else if (ch != '\b')
+            {
+                printf("*");
+                password[index++] = ch;
+            }
+        }
+        password[index] = '\0';
+        printf("\n");
+
         if (strcmp(password, currentUser->password) == 0)
         {
             printf("Logged in successfully as %s with level %d.\n", username, currentUser->access_level);
@@ -183,18 +203,17 @@ struct User loginUser(struct FileSystem *fs, const char *username, const char *p
     return emptyUser;
 }
 
-void resetPassword(struct FileSystem *fs, const char *username, const char *oldPassword, const char *newPassword)
+void resetPassword(struct FileSystem *fs, const char *username)
 {
-    if (fs == NULL || username == NULL || oldPassword == NULL || newPassword == NULL ||
-        isWhitespaceString(username) || isWhitespaceString(oldPassword) || isWhitespaceString(newPassword))
+    if (fs == NULL || username == NULL || isWhitespaceString(username))
     {
         printf("Invalid parameters provided for password reset.\n");
         return;
     }
 
-    if (strlen(username) >= MAX_USERNAME_LENGTH || strlen(newPassword) >= MAX_PASSWORD_LENGTH)
+    if (strlen(username) >= MAX_USERNAME_LENGTH)
     {
-        printf("Username or new password length exceeds maximum limit.\n");
+        printf("Username length exceeds maximum limit.\n");
         return;
     }
 
@@ -211,6 +230,7 @@ void resetPassword(struct FileSystem *fs, const char *username, const char *oldP
 
     if (currentUser != NULL)
     {
+        // Existing delay and login attempts logic...
         for (int i = 0; i < currentUser->delayParams.delayedUsersCount; ++i)
         {
             if (isUserTimerExpired(&(currentUser->delayParams.delayedUsers[i].timer)))
@@ -232,31 +252,27 @@ void resetPassword(struct FileSystem *fs, const char *username, const char *oldP
             return;
         }
 
-        if (strcmp(oldPassword, currentUser->password) == 0)
+        printf("Enter old password: ");
+        char oldPassword[MAX_PASSWORD_LENGTH];
+        int index = 0;
+        char ch;
+        while ((ch = _getch()) != '\r' && index < MAX_PASSWORD_LENGTH - 1)
         {
-            char reenteredNewPassword[MAX_PASSWORD_LENGTH];
-            printf("Enter the new password again for verification: ");
-            fgets(reenteredNewPassword, sizeof(reenteredNewPassword), stdin);
-            reenteredNewPassword[strcspn(reenteredNewPassword, "\n")] = '\0'; // Remove newline
-
-            if (strcmp(newPassword, reenteredNewPassword) != 0)
+            if (ch == '\b' && index > 0)
             {
-                printf("Passwords do not match. Password reset failed.\n");
-                return;
+                printf("\b \b");
+                index--;
             }
-
-            strncpy(currentUser->password, newPassword, MAX_PASSWORD_LENGTH - 1);
-            printf("Password reset successfully for user %s.\n", username);
-
-            // If the current user is resetting their own password, update it in the current_user of FileSystem
-            if (strcmp(fs->current_user.username, username) == 0)
+            else if (ch != '\b')
             {
-                strncpy(fs->current_user.password, newPassword, MAX_PASSWORD_LENGTH - 1);
+                printf("*");
+                oldPassword[index++] = ch;
             }
-
-            currentUser->login_attempts = 0; // Reset login attempts upon successful password reset
         }
-        else
+        oldPassword[index] = '\0';
+        printf("\n");
+
+        if (strcmp(oldPassword, currentUser->password) != 0)
         {
             currentUser->login_attempts++;
 
@@ -274,7 +290,62 @@ void resetPassword(struct FileSystem *fs, const char *username, const char *oldP
             {
                 printf("Password reset failed. Attempt %d.\n", attempts);
             }
+            return;
         }
+
+        printf("Enter new password: ");
+        char newPassword[MAX_PASSWORD_LENGTH];
+        index = 0;
+        while ((ch = _getch()) != '\r' && index < MAX_PASSWORD_LENGTH - 1)
+        {
+            if (ch == '\b' && index > 0)
+            {
+                printf("\b \b");
+                index--;
+            }
+            else if (ch != '\b')
+            {
+                printf("*");
+                newPassword[index++] = ch;
+            }
+        }
+        newPassword[index] = '\0';
+        printf("\n");
+
+        printf("Enter new password again for verification: ");
+        char newPasswordVerify[MAX_PASSWORD_LENGTH];
+        index = 0;
+        while ((ch = _getch()) != '\r' && index < MAX_PASSWORD_LENGTH - 1)
+        {
+            if (ch == '\b' && index > 0)
+            {
+                printf("\b \b");
+                index--;
+            }
+            else if (ch != '\b')
+            {
+                printf("*");
+                newPasswordVerify[index++] = ch;
+            }
+        }
+        newPasswordVerify[index] = '\0';
+        printf("\n");
+
+        if (strcmp(newPassword, newPasswordVerify) != 0)
+        {
+            printf("Passwords do not match. Password reset failed.\n");
+            return;
+        }
+
+        strncpy(currentUser->password, newPassword, MAX_PASSWORD_LENGTH - 1);
+        printf("Password reset successfully for user %s.\n", username);
+
+        if (strcmp(fs->current_user.username, username) == 0)
+        {
+            strncpy(fs->current_user.password, newPassword, MAX_PASSWORD_LENGTH - 1);
+        }
+
+        currentUser->login_attempts = 0;
     }
     else
     {

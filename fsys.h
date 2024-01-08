@@ -91,9 +91,9 @@ void addUserToSystem(struct FileSystem *fs, const char *username, const char *pa
 
 void deleteUserFromSystem(struct FileSystem *fs, const char *username);
 
-struct User loginUser(struct FileSystem *fs, const char *username, const char *password);
+struct User loginUser(struct FileSystem *fs, const char *username);
 
-void resetPassword(struct FileSystem *fs, const char *username, const char *oldPassword, const char *newPassword);
+void resetPassword(struct FileSystem *fs, const char *username);
 
 void initUser(struct User *user);
 

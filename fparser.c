@@ -110,11 +110,10 @@ void parseCommand(struct FileSystem *fs, const char *command)
     if (strcmp(cmd, "login") == 0)
     {
         char *username = strtok(NULL, " ");
-        char *password = strtok(NULL, " ");
 
-        if (username != NULL && password != NULL)
+        if (username != NULL)
         {
-            loginUser(fs, username, password);
+            loginUser(fs, username);
             return;
         }
     }
@@ -122,12 +121,10 @@ void parseCommand(struct FileSystem *fs, const char *command)
     if (strcmp(cmd, "reset") == 0)
     {
         char *username = strtok(NULL, " ");
-        char *oldPassword = strtok(NULL, " ");
-        char *newPassword = strtok(NULL, " ");
 
-        if (username != NULL && oldPassword != NULL && newPassword != NULL)
+        if (username != NULL)
         {
-            resetPassword(fs, username, oldPassword, newPassword);
+            resetPassword(fs, username);
             return;
         }
     }
